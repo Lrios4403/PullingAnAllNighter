@@ -35,7 +35,7 @@ public:
 	{
 		odprintf("Initalizing SCENE[titlescreen]...");
 
-		if (SoundMacro->LoadSoundFile(L"intro.wav", true, true, true) == 0)
+		if (SoundMacro->LoadSoundFile(L"resources\\intro.wav", true, true, true) == 0)
 		{
 			iIntroSoundIndex = SoundMacro->vSounds.size() - 1;
 		}
