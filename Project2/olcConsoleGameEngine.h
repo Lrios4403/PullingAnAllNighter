@@ -204,19 +204,25 @@ public:
 			Create(8, 8);
 	}
 
+	//~olcSprite()
+	//{
+	//	if (m_Glyphs != 0) free(m_Glyphs);
+	//	if (m_Colours != 0) free(m_Colours);
+	//}
+
 	int nWidth = 0;
 	int nHeight = 0;
 
 private:
-	short* m_Glyphs = nullptr;
-	short* m_Colours = nullptr;
+	short* m_Glyphs = 0;
+	short* m_Colours = 0;
 
 	void Create(int w, int h)
 	{
 		nWidth = w;
 		nHeight = h;
-		m_Glyphs = new short[w * h];
-		m_Colours = new short[w * h];
+		m_Glyphs = (short*) malloc(sizeof(short) * w * h);
+		m_Colours = (short*) malloc(sizeof(short) * w * h);;
 		for (int i = 0; i < w * h; i++)
 		{
 			m_Glyphs[i] = L' ';
@@ -317,6 +323,10 @@ public:
 		std::fclose(f);
 		return true;
 	}
+
+	short* GetGlyphsPointer() { return m_Glyphs; }
+	short* GetColorsPointer() { return m_Colours; }
+
 };
 
 class olcConsoleGameEngine
@@ -544,7 +554,7 @@ public:
 		DrawLine(x3, y3, x1, y1, c, col);
 	}
 
-	// https://www.avrfreaks.net/sites/default/files/triangles.c
+	// https://www.avrfreaks.net/sites/default/files/triangle3ds.c
 	void FillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, short c = 0x2588, short col = 0x000F)
 	{
 		auto SWAP = [](int& x, int& y) { int t = x; x = y; y = t; };

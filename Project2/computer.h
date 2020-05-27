@@ -14,22 +14,31 @@
 #include "program.h"
 #include "pchelloworld.h"
 #include "pcradio.h"
+#include "pcpopup.h"
+#include "pcmatrix.h"
 
 class Computer
 {
 private:
 	int screenWidth= 0, screenHeight= 0, screenFontWidth= 1, screenFontHeight = 1;
 	POINT pMouse, pLastMouse;
+	olcConsoleGameEngine* e;
 
 	olcSprite* spriteScreen;
 
-	vector<PcProgram*> vPrograms;
+	vector<PcProgram*>	vPrograms;
+	PcMonley*			pcMonkey;													//Yes ik i spelled monkey wrong it was 4 am stfu
+
+	bool				bPopup = false;
+	PcPopup*			pcPopup;
 
 public:
 	int Initalize(olcConsoleGameEngine* e, int fontwidth, int fontheight)
 	{
 		odprintf("Initalizing Computer...");
 		debugTabIndex++;
+
+		this->e = e;
 
 		odprintf("Setting screen values....");
 		screenWidth = e->ScreenWidth();												//Get and set the screen width
@@ -40,17 +49,21 @@ public:
 
 		//First we need to create the classes
 		odprintf("Creating Program classes...");
-		vPrograms.push_back(new PcHelloWorld());
-		vPrograms.push_back(new PcRadio());
+		pcPopup = new PcPopup();
+		((PcProgram*)pcPopup)->Initalize();
+
+		pcnCorrupted = new PcNotification;
+		pcnCorrupted->innerSprite = new olcSprite(L"resources\\pcalertcorrupted.png.spr");
+
+		vPrograms.push_back(new PcMonley());
+		pcMonkey = (PcMonley*)vPrograms[0];
+		vPrograms.push_back(new PcHelloWorld()); 
+		vPrograms.push_back(new PcMatrix());
 
 		int iTaskbarIndex = 0;
 		for (PcProgram* p : vPrograms)												//Cycle through all of the programs
 		{
 			p->Initalize();
-
-			p->Boot(e, 0.0f, 0.0f);
-
-			p->onDisplay = true;													//DEBUG: simple on
 
 			p->pDesktop = { 1, iTaskbarIndex+1 };
 
@@ -67,6 +80,8 @@ public:
 		//Then update the screen
 		Update(e, 0.0f, 0.0f);
 
+		ShowPopup();
+
 		debugTabIndex--;
 		odprintf("Initalized Computer...");
 
@@ -76,22 +91,27 @@ public:
 	int Update(olcConsoleGameEngine* olc, float fElapsed, float fElapsedTotal)
 	{
 		//Get the mouse position
-		RECT rWindow;
-		GetCursorPos(&pMouse);
-		GetWindowRect(GetConsoleWindow(), &rWindow);
+		//RECT rWindow;
+		//GetCursorPos(&pMouse);
+		//GetWindowRect(GetConsoleWindow(), &rWindow);
 
-		pLastMouse = pMouse;
+		//pLastMouse = pMouse;
 
-		pMouse.x -= rWindow.left + 8;
-		pMouse.y -= rWindow.top + 30;
+		//pMouse.x -= rWindow.left + 8;
+		//pMouse.y -= rWindow.top + 30;
 
-		pMouse.x = round(pMouse.x / 4);
-		pMouse.y = round(pMouse.y / 8);
+		//pMouse.x = round(pMouse.x / 4);
+		//pMouse.y = round(pMouse.y / 8);
 
-		if (pMouse.x < 0) pMouse.x = 0;												//Set into bounds
-		if (pMouse.y < 0) pMouse.y = 0;
-		if (pMouse.x > rWindow.right - rWindow.left) pMouse.x = rWindow.right - rWindow.left;
-		if (pMouse.y > rWindow.bottom - rWindow.top) pMouse.y = rWindow.bottom - rWindow.top;
+		//if (pMouse.x < 0) pMouse.x = 0;												//Set into bounds
+		//if (pMouse.y < 0) pMouse.y = 0;
+		//if (pMouse.x > rWindow.right - rWindow.left) pMouse.x = rWindow.right - rWindow.left;
+		//if (pMouse.y > rWindow.bottom - rWindow.top) pMouse.y = rWindow.bottom - rWindow.top;
+
+		bPopup = (pcnCurrent != nullptr);
+
+		pMouse.x = olc->GetMouseX();
+		pMouse.y = olc->GetMouseY();
 
 		//Check if the index was updated
 		if (!vPrograms[0]->isNeeded)												//Test to see if the user requires the first program
@@ -126,12 +146,16 @@ public:
 		}
 
 		//Update all of the vPrograms
-		bool bFrontProgram = true;
+		bool bFrontProgram = !bPopup;
+
 		for (PcProgram* p : vPrograms)
 		{
 			p->MouseUpdate(pMouse.x, pMouse.y);
-			p->Update(olc, fElapsed, fElapsedTotal, bFrontProgram);
-			if (p->onDisplay)bFrontProgram = false;
+			if (p->onDisplay)
+			{
+				p->Update(olc, fElapsed, fElapsedTotal, bFrontProgram);
+				bFrontProgram = false;
+			}
 		}
 
 		vector<PcProgram*> tp = GetTaskbarIndex();																			//Get the programs in order 
@@ -178,10 +202,50 @@ public:
 		}
 
 		//Render stuff
-		RenderDesktop();
-		RendervPrograms();
-		RenderToolbar();
-		RenderFrontProgram();														//Render the front program above the toolbar
+		if (!bPopup)
+		{
+			RenderDesktop();
+			RendervPrograms();
+			RenderToolbar();
+			RenderFrontProgram();														//Render the front program above the toolbar
+		}
+		else
+		{
+			((PcProgram*)pcPopup)->MouseUpdate(pMouse.x, pMouse.y);
+			((PcProgram*)pcPopup)->Update(olc, fElapsed, fElapsedTotal, true);
+
+			//Render the cyan backgrounds
+			for (int i = 0; i < screenWidth; i++)
+				for (int j = 0; j < screenHeight; j++)
+				{
+					spriteScreen->SetGlyph(i, j, PIXEL_HALF);
+					spriteScreen->SetColour(i, j, BG_WHITE | FG_BLACK);
+				}
+
+			//Now we must copy the sprite over to the mainsprite
+			for (int w = 0; w < pcPopup->windowSprite->nWidth; w++)
+				for (int h = 0; h < pcPopup->windowSprite->nHeight; h++)
+				{
+					//Get the x & y position to set the window
+					int x = pcPopup->windowPosition.u + w;
+					int y = pcPopup->windowPosition.v + h;
+
+					//Check the bounds of the clip
+					if (x < 0 || y < 0) continue;
+					if (x > screenWidth || y > screenHeight) continue;
+
+					//Set the pixel
+					spriteScreen->SetColour(x, y, pcPopup->windowSprite->GetColour(w, h));
+					spriteScreen->SetGlyph(x, y, pcPopup->windowSprite->GetGlyph(w, h));
+				}
+
+			//bPopup = pcPopup->onDisplay;
+			if (pcPopup->onDisplay == false)
+			{
+				delete pcnCurrent;
+				pcnCurrent = nullptr;
+			}
+		}
 
 		//Render the cursor to the program
 		spriteScreen->SetGlyph(pMouse.x, pMouse.y, PIXEL_HALF);
@@ -381,6 +445,14 @@ public:
 	olcSprite* GetScreenSprite()
 	{
 		return spriteScreen;
+	}
+
+	void ShowPopup()
+	{
+		((PcProgram*)pcPopup)->onDisplay = true;
+		if (!pcPopup->started) ((PcProgram*)pcPopup)->Boot(e, 0.0f, 0.0f);
+		else pcPopup->Display();
+		bPopup = true;
 	}
 
 };

@@ -18,6 +18,22 @@ struct PcButton
 	std::function<int()> function;
 };
 
+struct PcSound
+{
+	float fSoundMin = 75, fSoundMax = 100;
+	WaveData* wavData;
+};
+
+struct PcNotification
+{
+	olcSprite* innerSprite;
+};
+
+vector<PcSound*> vPcSounds;
+
+PcNotification* pcnCurrent = nullptr;
+PcNotification* pcnCorrupted = nullptr;
+
 class PcProgram
 {
 public:

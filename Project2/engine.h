@@ -11,32 +11,32 @@
 #include "scene.h"
 #include "scenehome.h"
 #include "scenemain01.h"
+#include "scenemain11.h"
+#include "scenetest001.h"
 #include "debug.h"
 #include "macro.h"
 
-#define _WIN32_WINNT 0x0500
+#define WINVER			0x0400 
+#define _WIN32_WINNT	0x0400 
 #include <windows.h>
 
 /*=====================================================================================================================*/
 /*
-/*	TODO:	+ Make a console manager class
-/*				- Changes\Saves the registery keys for the:
-/*					~ Color
-/*					~ Font
+/*	TODO:	+
 /*
 /*=====================================================================================================================*/
 
 class Engine : public olcConsoleGameEngine
 {
 public:
-	long sceneIndex = 0;
+	long sceneIndex = 1;
+	long lastIndex = -1;
 	std::vector<Scene*> scenes;
 
 	bool bFistRun = false;
 
 	Anticheat anticheat;
 	SoundManager soundManager;
-	////steamManager //steamManager;
 	ConsoleManager consoleManager;
 
 	DWORD dwConsoleColors[16];
@@ -63,15 +63,19 @@ public:
 		consoleManager.Initalize(this);
 		soundManager = SoundManager();
 		soundManager.Initalize();
-		//steamManager = //steamManager();
-		//steamManager.Initalize();
 		debugTabIndex--;
 
 		odprintf("Initalizing all the scenes...");
-		scenes.push_back(new SceneTitlescreen());
-		scenes[scenes.size() - 1]->Initalize(this);
-		scenes.push_back(new Scene01());
-		scenes[scenes.size() - 1]->Initalize(this);
+		scenes.push_back(new SceneTitlescreen);
+		scenes.push_back(new Scene11);
+		//scenes.push_back(new SceneTest001);
+		for (size_t t = 0; t < scenes.size(); t++)
+			scenes[t]->Create(this);
+		odprintf("Total initalization time:");
+		debugTabIndex++;
+		for (size_t t = 0; t < scenes.size(); t++)
+			odprintf("%f", scenes[t]->fCreateTime);
+		debugTabIndex--;
 
 		debugTabIndex--;
 		odprintf("Initalzed Engine!");
@@ -82,18 +86,20 @@ public:
 
 	bool OnUserUpdate(float fElapsedTime) override
 	{
-		long lastIndex = sceneIndex;
-
-		SWITCHANDRUN(bFistRun, scenes[sceneIndex]->Switch(sceneIndex);)
-
-		scenes[sceneIndex]->Update(fElapsedTime, &sceneIndex);
-
-		ShowWindow(GetConsoleWindow(), SW_SHOW);
-
 		if (sceneIndex != lastIndex)
 		{
 			scenes[sceneIndex]->Switch(lastIndex);
-			scenes[lastIndex]->End();
+			if(scenes.size() >= lastIndex || lastIndex > 0) scenes[lastIndex]->End();
+			lastIndex = sceneIndex;
+		}
+
+		scenes[sceneIndex]->Update(fElapsedTime, &sceneIndex);
+
+		if (!bFistRun)
+		{
+			consoleManager.ShowConsole(true);
+			consoleManager.CenterWindow();
+			bFistRun = true;
 		}
 
 		return true;
