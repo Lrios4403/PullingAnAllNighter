@@ -318,7 +318,7 @@ public:
 
 	olcSprite*				sprBanana, * sprSpace, * sprCongrats, * sprIntro, * sprControls, * sprLastTransition;
 	PcSound*				wavIntro, * wavMain, * wavJump, * wavCongrat, * wavDeath;
-	bool					bCanJump = false, bIntro = true, bControls = false;
+	bool					bCanJump = false, bIntro = true, bControls = false, bEnded = false;
 	vec2d					vPlayerVelocity, vPlayerAcceleration;
 	vector<MonkeyLevel>		vMonkeyLevels;
 	vec3d					vPerfectCamera = vec3d(-5.920451, 0.500000, 6.504760); 
@@ -353,7 +353,7 @@ public:
 
 		CenterWindow();
 
-		spriteIcon = new olcSprite(L"resources\\pcradioicon.png.spr");
+		spriteIcon = new olcSprite(L"resources\\iconmonkey.png.spr");
 
 		return 0;
 	}
@@ -538,6 +538,7 @@ public:
 					if (fElapsedLast > 10.0f)
 					{
 						Exit();
+						bEnded = true;
 						return;
 					}
 				}
@@ -630,8 +631,16 @@ public:
 		}
 		else
 		{
-			if ((olc->GetKey(VK_RETURN).bPressed || olc->GetKey(VK_SPACE).bPressed) && bControls == false) bControls = true;
-			else if ((olc->GetKey(VK_RETURN).bPressed || olc->GetKey(VK_SPACE).bPressed) && bControls == true) bIntro = false;
+			if ((olc->GetKey(VK_RETURN).bPressed || olc->GetKey(VK_SPACE).bPressed) && bControls == false)
+			{
+				bControls = true;
+				wavIntro->wavData->lpSecondaryBuffer->Stop();
+				wavMain->wavData->lpSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+			}
+			else if ((olc->GetKey(VK_RETURN).bPressed || olc->GetKey(VK_SPACE).bPressed) && bControls == true)
+			{
+				bIntro = false;
+			}
 		}
 
 	}
@@ -815,6 +824,8 @@ public:
 
 	int Boot(olcConsoleGameEngine* olc, float fElapsed, float fElapsedTotal) override
 	{
+		if (bEnded) return -1;
+
 		if (onDisplay == false)
 		{
 			if (fElapsedLast >= 10.0f)
@@ -939,5 +950,871 @@ public:
 	}
 
 };
+
+class PcDriver : public PcProgram
+{
+public:
+	olcSprite*			sprCar1, * sprCar2, * sprControls, * sprBranch, * sprBranch2, * sprHouse, * sprIntro, * sprEnding;
+	rectangle			rPlayerPos;
+	PcSound*			wavMain, * wavAmbience;
+	vector<rectangle>	rEnemyPos;
+	vector<vec2d>		rBranchPos;
+	rectangle			rHouse;
+
+	float fElapsedTotal = 0, fLastEnemySpawn = 0, fEnemySpeed = 0, fRoadSpeed = 0, fHouseY = 0;
+	int numberoftimesdied = 9;
+	bool bCanEnd = true, bIsOutside = false, bIntro = true, bOutsideTrigger = false;
+
+public:
+	int lastMouseX = 0, lastMouseY = 0;
+	int mouseX = 0, mouseY = 0;
+	bool exitProgram = false;
+	bool isdraggingwindow = false;
+	bool started = false;
+	float fBootedTime = 0.0f;
+	bool bIsFront = true;
+	bool bEnded = false, bBooted = false;
+
+	int Initalize() override
+	{
+		windowSprite = new olcSprite(250, 75 + 2);										//Setup the default window to display
+
+		for (int i = 0; i < windowSprite->nWidth; i++)									//Clear the window sprite
+			for (int j = 0; j < windowSprite->nHeight; j++)
+			{
+				windowSprite->SetGlyph(i, j, PIXEL_HALF);
+
+				windowSprite->SetColour(i, j, BG_WHITE | FG_WHITE);
+
+			}
+
+		onTaskbar = true;
+
+		CenterWindow();
+
+		spriteIcon = new olcSprite(L"resources\\iconcar.png.spr");
+
+		return 0;
+	}
+
+	void OnDeath()
+	{
+		rEnemyPos.resize(0);
+		rEnemyPos.shrink_to_fit();
+		rPlayerPos.offset = vec2d(118.895958, 2.22059011);
+		fEnemySpeed = 0;
+		numberoftimesdied++;
+
+		if (numberoftimesdied < 5)
+			wavMain->wavData->SetVolume(5 - (numberoftimesdied), 5);
+		else
+			wavMain->wavData->SetVolume(0, 5);
+
+		if (numberoftimesdied >= 9)
+		{
+			bIsOutside = true;
+			bEnded = true;
+		}
+
+	}
+
+	void UpdateMain(olcConsoleGameEngine* olc, float fElapsedTime)
+	{
+		if (bIntro)
+		{
+			SpriteDrawSprite(windowSprite, 0, 2, sprIntro);
+			if (olc->GetKey(VK_RETURN).bPressed) bIntro = false;
+		}
+		else
+		{
+			fElapsedTotal += fElapsedTime;
+			fRoadSpeed += fElapsedTime * (1 - (numberoftimesdied * .1));
+
+			if (floorf(fLastEnemySpawn * 2) < floorf(fElapsedTotal * 2) && numberoftimesdied < 9)
+			{
+				rEnemyPos.push_back(rectangle(0, 0, sprCar2->nWidth * 2, sprCar2->nHeight * 2));
+				rEnemyPos[rEnemyPos.size() - 1].offset = vec2d(25 + (rand() % (250 - 50)) - (sprCar2->nHeight * 2), 75);
+				fLastEnemySpawn = fElapsedTotal;
+			}
+
+			if (numberoftimesdied < 6)
+				SpriteFill(windowSprite, 0, 0 + 2, 250, 75 + 2, PIXEL_SOLID, FG_BLACK | BG_BLACK);
+			else if (numberoftimesdied >= 6)
+				SpriteFill(windowSprite, 0, 0 + 2, 250, 75 + 2, PIXEL_HALF, FG_GREY | BG_RED);
+
+			if (numberoftimesdied < 4)
+			{
+				SpriteFill(windowSprite, 0, 0 + 2, 25, 75 + 2, PIXEL_HALF, FG_GREY | BG_DARK_GREY);
+				SpriteFill(windowSprite, 250 - 25, 0 + 2, 250, 75 + 2, PIXEL_HALF, FG_GREY | BG_DARK_GREY);
+			}
+			else if (numberoftimesdied >= 4)
+			{
+				SpriteFill(windowSprite, 0, 0 + 2, 25, 75 + 2, PIXEL_HALF, FG_RED | BG_DARK_GREY);
+				SpriteFill(windowSprite, 250 - 25, 0 + 2, 250, 75 + 2, PIXEL_HALF, FG_RED | BG_DARK_GREY);
+			}
+
+			int	isub = ((int)(fRoadSpeed * 250) % 20);
+			float fsub = -20 + isub;
+
+			if (numberoftimesdied < 9)
+				for (int i = 0; i < 8; i++)
+				{
+					SpriteFill(windowSprite, (250 / 2) - 2, ((i * 20) + fsub) - 10 + 2, (250 / 2) + 2, (i * 20) + fsub + 2, PIXEL_HALF, FG_YELLOW | BG_BLACK);
+				}
+
+			if (olc->GetKey(L'W').bHeld) rPlayerPos.offset.y -= fElapsedTime * 5 * 2 * 2 * 2;
+			if (olc->GetKey(L'S').bHeld) rPlayerPos.offset.y += fElapsedTime * 5 * 2 * 2 * 2;
+			if (olc->GetKey(L'A').bHeld) rPlayerPos.offset.x -= fElapsedTime * 5 * 3 * 2 * 2 * 2;
+			if (olc->GetKey(L'D').bHeld) rPlayerPos.offset.x += fElapsedTime * 5 * 3 * 2 * 2 * 2;
+
+			if (numberoftimesdied >= 9)
+				if (rHouse.bFastCollidsWith(rPlayerPos))
+				{
+					rPlayerPos.offset = vec2d(118.479828, 57.1731796);
+				}
+
+			if (fElapsedTotal < 0)
+			{
+				for (int i = 0; i < sprCar1->nWidth * 2; i++)
+				{
+					for (int j = 0; j < sprCar1->nHeight * 2; j++)
+					{
+						SpriteDraw(windowSprite, rPlayerPos.offset.x + i, rPlayerPos.offset.y + j + 2, sprCar1->GetGlyph(floor(i / 2), floor(j / 2)), sprCar1->GetColour(floor(i / 2), floor(j / 2)));
+					}
+				}
+
+				SpriteDrawSprite(windowSprite, 0, 0 + 2, sprControls);
+
+			}
+			else
+			{
+				fEnemySpeed += fElapsedTime * .1;
+				if (rPlayerPos.offset.x < 26) rPlayerPos.offset.x = 26;
+				if (rPlayerPos.offset.x > 209) rPlayerPos.offset.x = 209;
+				if (rPlayerPos.offset.y < 0) rPlayerPos.offset.y = 0;
+				if (rPlayerPos.offset.y > 75 - rPlayerPos.p[3].y) rPlayerPos.offset.y = 75 - rPlayerPos.p[3].y;
+
+				if (olc->GetKey(L'Q').bPressed) odprintf("%d %d", olc->GetMouseX(), olc->GetMouseY());
+
+				for (int i = 0; i < sprCar1->nWidth * 2; i++)
+				{
+					for (int j = 0; j < sprCar1->nHeight * 2; j++)
+					{
+						SpriteDraw(windowSprite, rPlayerPos.offset.x + i, rPlayerPos.offset.y + j + 2, sprCar1->GetGlyph(floor(i / 2), floor(j / 2)), sprCar1->GetColour(floor(i / 2), floor(j / 2)));
+					}
+				}
+
+				for (size_t t = 0; t < rEnemyPos.size(); t++)
+				{
+					rectangle* r = &rEnemyPos[t];
+					r->offset.y -= fElapsedTime * 5 * 2 * 2 * 2 + fEnemySpeed;
+					for (int i = 0; i < sprCar2->nWidth * 2; i++)
+					{
+						for (int j = 0; j < sprCar2->nHeight * 2; j++)
+						{
+							SpriteDraw(windowSprite, r->offset.x + i, r->offset.y + j + 2, sprCar2->GetGlyph(floor(i / 2), floor(j / 2)), sprCar2->GetColour(floor(i / 2), floor(j / 2)));
+						}
+					}
+				}
+
+				if (numberoftimesdied >= 9)
+				{
+					for (int i = 0; i < sprHouse->nWidth * 2.5; i++)
+					{
+						for (int j = 0; j < sprHouse->nHeight * 2.5; j++)
+						{
+							fHouseY += fElapsedTime * .0025;
+							if (fHouseY > 0)
+							{
+								fHouseY = 0;
+							}
+
+							wavMain->wavData->SetVolume(-fHouseY * .1, (rHouse.p[3].y * 1.5));
+							SpriteDraw(windowSprite, i, j + fHouseY + 2, sprHouse->GetGlyph(floor(i / 2.5), floor(j / 2.5)), sprHouse->GetColour(floor(i / 2.5), floor(j / 2.5)));
+						}
+					}
+
+					SpriteDrawSprite(windowSprite, 0, 0, sprEnding);
+				}
+
+				if (numberoftimesdied >= 2)
+					for (auto v : rBranchPos)
+					{
+						if (v.x <= 250 / 2)
+							SpriteDrawSprite(windowSprite, v.x, v.y + 2, sprBranch);
+						else if (v.x >= 250 / 2)
+							SpriteDrawSprite(windowSprite, v.x - sprBranch2->nWidth, v.y + 2, sprBranch2);
+					}
+
+
+
+				for (auto r : rEnemyPos)
+				{
+					if (r.bFastCollidsWith(rPlayerPos)) OnDeath();
+				}
+
+			}
+
+		}
+
+		return;
+
+	}
+
+	int Update(olcConsoleGameEngine* olc, float fElapsed, float fElapsedTotal, bool front) override
+	{
+		int relMousePosX = mouseX - windowPosition.u;
+		int relMousePosY = mouseY - windowPosition.v - 2;
+
+		bIsFront = front;
+
+		//Cool loading effect
+		if (!started && onDisplay && fElapsedTotal - fBootedTime >= 0.05f)
+		{
+			started = true;
+		}
+		else
+			Draw(olc);
+
+		//Check if the mouse is held
+		if (olc->GetMouse(0).bHeld)
+		{
+			//Test to see if we are dragging the mouse
+			if (front)
+				if (mouseX != lastMouseX || mouseY != lastMouseY)															//We are dragging
+				{
+					if (lastMouseY == windowPosition.v || lastMouseY == windowPosition.v + 1)								//We are moving the window
+					{
+						isdraggingwindow = true;
+						isNeeded = true;
+					}
+				}
+				else																									//We are clicking
+				{
+					if (mouseX == windowPosition.u + (windowSprite->nWidth - 3) || mouseX == windowPosition.u + (windowSprite->nWidth - 2))
+					{
+						if (mouseY == windowPosition.v || mouseY == windowPosition.v + 1)
+						{
+							if(bCanEnd)
+							Exit();
+
+							for (int i = 0; i < windowSprite->nWidth; i++)												//Clear the window sprite
+							{
+								for (int j = 0; j < windowSprite->nHeight; j++)
+								{
+									windowSprite->SetGlyph(i, j, PIXEL_HALF);
+									windowSprite->SetColour(i, j, BG_GREY | FG_DARK_GREY);
+								}
+							}
+						}
+					}
+				}
+		}
+
+
+		if (front)
+		{
+			UpdateMain(olc, fElapsed);
+			//if (fElapsedLast < 10.0f) DrawMain();
+		}
+
+
+		if (olc->GetMouse(0).bReleased)
+		{
+			if (isdraggingwindow)
+			{
+				isdraggingwindow = false;
+				isNeeded = false;
+			}
+
+			if (exitProgram == true)
+			{
+				onDisplay = false;
+				exitProgram = false;
+			}
+		}
+
+		if (isdraggingwindow)
+		{
+			windowPosition.u += mouseX - lastMouseX;
+			windowPosition.v += mouseY - lastMouseY;
+		}
+		
+		SpriteFill(windowSprite,0,0,250*.75,2, PIXEL_SOLID, BG_CYAN | FG_CYAN);
+
+		return 0;
+	}
+
+	int Exit()
+	{
+		wavMain->wavData->lpSecondaryBuffer->Stop();
+		wavAmbience->wavData->lpSecondaryBuffer->Stop();
+
+		exitProgram = true;
+
+		return 0;
+	}
+
+	int Display() override
+	{
+
+		for (int i = 0; i < windowSprite->nWidth; i++)												//Clear the window sprite
+			for (int j = 0; j < windowSprite->nHeight; j++)
+			{
+				windowSprite->SetGlyph(i, j, PIXEL_SOLID);
+
+				if (j > 1)
+					windowSprite->SetColour(i, j, BG_WHITE | FG_WHITE);
+				else
+					windowSprite->SetColour(i, j, BG_CYAN | FG_CYAN);
+
+			}
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 2), 0, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 2), 0, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 2), 1, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 2), 1, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 3), 0, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 3), 0, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 3), 1, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 3), 1, BG_CYAN | FG_RED);
+
+
+		return 0;
+	}
+
+	int Draw(olcConsoleGameEngine* e)
+	{
+		int relMousePosX = mouseX - windowPosition.u;
+		int relMousePosY = mouseY - windowPosition.v - 2;
+
+		for (int i = 0; i < windowSprite->nWidth; i++)															//Clear the window sprite
+			for (int j = 0; j < windowSprite->nHeight; j++)
+			{
+				windowSprite->SetGlyph(i, j, PIXEL_SOLID);
+
+				if (j > 1)
+					windowSprite->SetColour(i, j, BG_WHITE | FG_WHITE);
+				else
+					windowSprite->SetColour(i, j, BG_CYAN | FG_CYAN);
+
+			}
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 2), 0, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 2), 0, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 2), 1, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 2), 1, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 3), 0, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 3), 0, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 3), 1, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 3), 1, BG_CYAN | FG_RED);
+
+		//Cycle through all the buttons in order to see if we click one
+		bool bInside = false;
+
+		return 0;
+	}
+
+	int Boot(olcConsoleGameEngine* olc, float fElapsed, float fElapsedTotal) override
+	{
+		if (bEnded) return -1;
+
+		if (onDisplay == false)
+		{
+			onDisplay = true;
+
+			fBootedTime = fElapsedTotal;
+
+			started = false;
+
+			CenterWindow();
+
+			if (bBooted) return 0;
+
+			this->fElapsedTotal = -10; fLastEnemySpawn = 0; fEnemySpeed = 0; fRoadSpeed = 0; fHouseY = 0;
+			numberoftimesdied = 0;
+
+			sprCar1 = new olcSprite(L"resources\\pcbattlecar1.png.spr");
+			sprCar2 = new olcSprite(L"resources\\pcbattlecar2.png.spr");
+			sprControls = new olcSprite(L"resources\\pcbattlecontrols.png.spr");
+			sprBranch = new olcSprite(L"resources\\branch.png.spr");
+			sprBranch2 = new olcSprite(L"resources\\branch2.png.spr");
+			sprHouse = new olcSprite(L"resources\\pcbattlehouse.png.spr"); 
+			sprIntro = new olcSprite(L"resources\\pcbattleintro.png.spr");
+			sprEnding = new olcSprite(L"resources\\pcbattleending.png.spr");
+
+			rPlayerPos = rectangle(0, 0, sprCar1->nWidth * 2, sprCar1->nHeight * 2);
+			rHouse = rectangle(0, 0, sprHouse->nWidth * 2.5, sprHouse->nHeight * 2.5);
+			rPlayerPos.offset = vec2d(118.895958, 2.22059011);
+			fHouseY = -rHouse.p[3].y * 1.5;
+
+			wavMain = new PcSound;
+			wavAmbience = new PcSound;
+
+			vPcSounds.push_back(wavMain);
+			vPcSounds.push_back(wavAmbience);
+
+			wavMain->wavData = SoundMacro->LoadSoundFileGetWave(L"resources\\pcbattlemain.wav", false, true, false);
+			wavAmbience->wavData = SoundMacro->LoadSoundFileGetWave(L"resources\\pcbattleambience.wav", false, true, false);
+			wavMain->wavData->lpSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+			wavAmbience->wavData->lpSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+			wavAmbience->wavData->SetVolume(35.0f);
+
+			rBranchPos.push_back({ 0.000000000, 2.00000000 });
+			rBranchPos.push_back({ 3.00000000, 31.0000000 });
+			rBranchPos.push_back({ 2.00000000, 36.0000000 });
+			rBranchPos.push_back({ 0.000000000, 33.0000000 });
+			rBranchPos.push_back({ 0.000000000, 62.0000000 });
+			rBranchPos.push_back(vec2d(249 + 1, 0));
+			rBranchPos.push_back(vec2d(249 + 1, 0));
+			rBranchPos.push_back(vec2d(249 + 1, 21));
+			rBranchPos.push_back(vec2d(249 + 1, 21));
+			rBranchPos.push_back(vec2d(248 + 1, 46));
+			rBranchPos.push_back(vec2d(248 + 1, 46));
+			rBranchPos.push_back(vec2d(249 + 1, 47));
+			rBranchPos.push_back(vec2d(249 + 1, 47));
+			rBranchPos.push_back(vec2d(248 + 1, 1));
+			rBranchPos.push_back(vec2d(248 + 1, 1));
+			rBranchPos.push_back(vec2d(241 + 1, 27));
+			rBranchPos.push_back(vec2d(241 + 1, 27));
+			rBranchPos.push_back(vec2d(248 + 1, 32));
+			rBranchPos.push_back(vec2d(248 + 1, 32));
+
+			srand(time(NULL));
+
+			bBooted = true;
+		}
+
+		return 0;
+	}
+
+	int MouseUpdate(int x, int y) override
+	{
+		this->lastMouseX = mouseX;
+		this->lastMouseY = mouseY;
+		this->mouseX = x;
+		this->mouseY = y;
+
+		return 0;
+	}
+
+};
+
+class PcSnake : public PcProgram
+{
+public:
+	enum SnakeMovement
+	{
+		SnakeMovement_none	= 0,
+		SnakeMovement_left	= 1,
+		SnakeMovement_right = 2,
+		SnakeMovement_up	= 3,
+		SnakeMovement_down	= 4
+	};
+
+public:
+	vec2d			vFoodPos;
+	vec2d			vSnakePos;
+	vector<vec2d>	vSnakeTail;
+	SnakeMovement	snakeCurrentMovement = SnakeMovement_none;
+	olcSprite		* sprGameOver;
+	PcSound			* wavMain, * wavEat, * wavDeath;
+	size_t			scoreCurrent = 0, scoreHigh = 0;
+
+	float	fLastTime = 0, fTotalTime = 0;
+	float	fWavEat = 0, fWavDeath = 0;
+	bool	bOnDeath = false;
+	bool	bIsMoving = false;
+
+public:
+	int lastMouseX = 0, lastMouseY = 0;
+	int mouseX = 0, mouseY = 0;
+	bool exitProgram = false;
+	bool isdraggingwindow = false;
+	bool started = false;
+	float fBootedTime = 0.0f;
+	bool bIsFront = true;
+	bool bEnded = false, bBooted = false;
+
+	int Initalize() override
+	{
+		windowSprite = new olcSprite(250, 75 + 2);										//Setup the default window to display
+
+		for (int i = 0; i < windowSprite->nWidth; i++)									//Clear the window sprite
+			for (int j = 0; j < windowSprite->nHeight; j++)
+			{
+				windowSprite->SetGlyph(i, j, PIXEL_HALF);
+
+				windowSprite->SetColour(i, j, BG_WHITE | FG_WHITE);
+
+			}
+
+		onTaskbar = true;
+
+		CenterWindow();
+
+		return 0;
+	}
+
+	void HandleSounds(float fElapsedTime)
+	{
+		if (fWavEat < 1)
+		{
+			fWavEat += fElapsedTime;
+
+			if (fWavEat > 1)
+			{
+				wavEat->wavData->lpSecondaryBuffer->Stop();
+				wavEat->wavData->lpSecondaryBuffer->SetCurrentPosition(0);
+			}
+		}
+
+		if (fWavDeath < .5)
+		{
+			fWavDeath += fElapsedTime;
+
+			if (fWavDeath > .5)
+			{
+				wavDeath->wavData->lpSecondaryBuffer->Stop();
+				wavDeath->wavData->lpSecondaryBuffer->SetCurrentPosition(0);
+			}
+		}
+
+	}
+
+	void SetFood()
+	{
+		bool bSuitable = false;
+
+		while (!bSuitable)
+		{
+			bSuitable = true;
+
+			vFoodPos.x = rand() % ((int)(250 / 2.25)) + 1;
+			vFoodPos.y = rand() % ((int)(75 / 2.25)) + 1;
+
+			if (vSnakePos == vFoodPos)
+				bSuitable = false;
+
+			for (auto r : vSnakeTail)
+				if (r == vFoodPos) bSuitable = false;
+		}
+
+		odprintf("%f %f", vFoodPos.x, vFoodPos.y);
+	}
+
+	void Reset()
+	{
+		vSnakeTail.resize(0);
+		vSnakeTail.shrink_to_fit();
+		vSnakePos = vec2d(20, 10);
+		bOnDeath = false;
+		snakeCurrentMovement = SnakeMovement_none;
+		SetFood();
+		SpriteFill(windowSprite, 0, 0+2, 250, 75 + 2, 0);
+		wavMain->wavData->lpSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+		wavMain->wavData->lpSecondaryBuffer->SetCurrentPosition(0);
+		
+		if (scoreHigh > scoreCurrent) scoreHigh = scoreCurrent;
+
+	}
+
+	void OnDeath()
+	{
+		bOnDeath = true;
+		wavMain->wavData->lpSecondaryBuffer->Stop();
+		wavDeath->wavData->lpSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+		fWavDeath = 0;
+	}
+
+	bool UpdateMain(olcConsoleGameEngine* olc, float fElapsedTime)
+	{
+		HandleSounds(fElapsedTime);
+
+		if (!bOnDeath)
+		{
+			fTotalTime += fElapsedTime;
+			fLastTime += fElapsedTime;
+			if (fLastTime < .05) return true;
+			fLastTime = 0;
+
+			if (olc->GetKey(L'A').bHeld)
+			{
+				snakeCurrentMovement = SnakeMovement_left;
+			}
+			else if (olc->GetKey(L'D').bHeld)
+			{
+				snakeCurrentMovement = SnakeMovement_right;
+			}
+			else if (olc->GetKey(L'W').bHeld)
+			{
+				snakeCurrentMovement = SnakeMovement_up;
+			}
+			else if (olc->GetKey(L'S').bHeld)
+			{
+				snakeCurrentMovement = SnakeMovement_down;
+			}
+
+			bIsMoving = true;
+			switch (snakeCurrentMovement)
+			{
+			case SnakeMovement_left:
+				vSnakePos.x--;
+				break;
+			case SnakeMovement_right:
+				vSnakePos.x++;
+				break;
+			case SnakeMovement_up:
+				vSnakePos.y--;
+				break;
+			case SnakeMovement_down:
+				vSnakePos.y++;
+				break;
+			default:
+				bIsMoving = false;
+				break;
+			}
+
+			for (auto r : vSnakeTail)
+			{
+				SpriteDraw(windowSprite, r.u * 2 + 1, r.v * 2 + 1 + 2);
+				SpriteDraw(windowSprite, r.u * 2, r.v * 2 + 1 + 2);
+				SpriteDraw(windowSprite, r.u * 2 + 1, r.v * 2 + 2);
+				SpriteDraw(windowSprite, r.u * 2, r.v * 2 + 2);
+
+			}
+
+			for (auto r : vSnakeTail)
+			{
+				if (r == vSnakePos && bIsMoving)
+				{
+					OnDeath();
+				}
+			}
+
+			if (vSnakePos.x < 0 || vSnakePos.y < 0 || vSnakePos.x >(250 / 2) - 1 || vSnakePos.y >(75 / 2) - 1)
+			{
+				OnDeath();
+			}
+
+			if (vSnakePos == vFoodPos)
+			{
+				SetFood();
+				wavEat->wavData->lpSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+				fWavEat = 0;
+			}
+
+			vSnakeTail.push_back(vSnakePos);
+
+			SpriteDraw(windowSprite, vSnakePos.u * 2 + 1, vSnakePos.v * 2 + 1 + 2, PIXEL_HALF, FG_BLUE | BG_GREY);
+			SpriteDraw(windowSprite, vSnakePos.u * 2, vSnakePos.v * 2 + 1 + 2, PIXEL_HALF, FG_BLUE | BG_GREY);
+			SpriteDraw(windowSprite, vSnakePos.u * 2 + 1, vSnakePos.v * 2 + 2, PIXEL_HALF, FG_BLUE | BG_GREY);
+			SpriteDraw(windowSprite, vSnakePos.u * 2, vSnakePos.v * 2 + 2, PIXEL_HALF, FG_BLUE | BG_GREY);
+
+			SpriteDraw(windowSprite, vFoodPos.u * 2 + 1, vFoodPos.v * 2 + 1 + 2, PIXEL_HALF, FG_GREEN | BG_GREY);
+			SpriteDraw(windowSprite, vFoodPos.u * 2, vFoodPos.v * 2 + 1 + 2, PIXEL_HALF, FG_GREEN | BG_GREY);
+			SpriteDraw(windowSprite, vFoodPos.u * 2 + 1, vFoodPos.v * 2 + 2, PIXEL_HALF, FG_GREEN | BG_GREY);
+			SpriteDraw(windowSprite, vFoodPos.u * 2, vFoodPos.v * 2 + 2, PIXEL_HALF, FG_GREEN | BG_GREY);
+
+		}
+		else
+		{
+			for (auto r : vSnakeTail)
+			{
+				SpriteDraw(windowSprite, r.u * 2 + 1, r.v * 2 + 1 + 2);
+				SpriteDraw(windowSprite, r.u * 2, r.v * 2 + 1 + 2);
+				SpriteDraw(windowSprite, r.u * 2 + 1, r.v * 2 + 2);
+				SpriteDraw(windowSprite, r.u * 2, r.v * 2 + 2);
+
+			}
+
+			SpriteDraw(windowSprite, vSnakePos.u * 2 + 1, vSnakePos.v * 2 + 1 + 2, PIXEL_HALF, FG_RED | BG_GREY);
+			SpriteDraw(windowSprite, vSnakePos.u * 2, vSnakePos.v * 2 + 1 + 2, PIXEL_HALF, FG_RED | BG_GREY);
+			SpriteDraw(windowSprite, vSnakePos.u * 2 + 1, vSnakePos.v * 2 + 2, PIXEL_HALF, FG_RED | BG_GREY);
+			SpriteDraw(windowSprite, vSnakePos.u * 2, vSnakePos.v * 2 + 2, PIXEL_HALF, FG_RED | BG_GREY);
+
+			SpriteDrawSprite(windowSprite, (250 / 2) - (sprGameOver->nWidth / 2), 10 + 2, sprGameOver);
+
+			if (olc->GetKey(VK_RETURN).bPressed) Reset();
+
+		}
+
+		Display();
+
+		return true;
+	}
+
+	int Update(olcConsoleGameEngine* olc, float fElapsed, float fElapsedTotal, bool front) override
+	{
+		int relMousePosX = mouseX - windowPosition.u;
+		int relMousePosY = mouseY - windowPosition.v - 2;
+
+		bIsFront = front;
+
+		//Cool loading effect
+		if (!started && onDisplay && fElapsedTotal - fBootedTime >= 0.05f)
+		{
+			started = true;
+		}
+
+		//Check if the mouse is held
+		if (olc->GetMouse(0).bHeld)
+		{
+			//Test to see if we are dragging the mouse
+			if (front)
+				if (mouseX != lastMouseX || mouseY != lastMouseY)															//We are dragging
+				{
+					if (lastMouseY == windowPosition.v || lastMouseY == windowPosition.v + 1)								//We are moving the window
+					{
+						isdraggingwindow = true;
+						isNeeded = true;
+					}
+				}
+				else																									//We are clicking
+				{
+					if (mouseX == windowPosition.u + (windowSprite->nWidth - 3) || mouseX == windowPosition.u + (windowSprite->nWidth - 2))
+					{
+						if (mouseY == windowPosition.v || mouseY == windowPosition.v + 1)
+						{
+							Exit();
+
+							for (int i = 0; i < windowSprite->nWidth; i++)												//Clear the window sprite
+							{
+								for (int j = 0; j < windowSprite->nHeight; j++)
+								{
+									windowSprite->SetGlyph(i, j, PIXEL_HALF);
+									windowSprite->SetColour(i, j, BG_GREY | FG_DARK_GREY);
+								}
+							}
+						}
+					}
+				}
+		}
+
+
+		if (front)
+		{
+			UpdateMain(olc, fElapsed);
+			//if (fElapsedLast < 10.0f) DrawMain();
+		}
+
+
+		if (olc->GetMouse(0).bReleased)
+		{
+			if (isdraggingwindow)
+			{
+				isdraggingwindow = false;
+				isNeeded = false;
+			}
+
+			if (exitProgram == true)
+			{
+				onDisplay = false;
+				exitProgram = false;
+			}
+		}
+
+		if (isdraggingwindow)
+		{
+			windowPosition.u += mouseX - lastMouseX;
+			windowPosition.v += mouseY - lastMouseY;
+		}
+
+		SpriteFill(windowSprite, 0, 0, 250 * .75, 2, PIXEL_SOLID, BG_CYAN | FG_CYAN);
+
+		return 0;
+	}
+
+	int Exit()
+	{
+		wavMain->wavData->lpSecondaryBuffer->Stop();
+		wavEat->wavData->lpSecondaryBuffer->Stop();
+		wavDeath->wavData->lpSecondaryBuffer->Stop();
+
+		exitProgram = true;
+
+		return 0;
+	}
+
+	int Display() override
+	{
+		for(int i = 0; i < windowSprite->nWidth; i++)
+			for (int j = 0; j < 2; j++)
+			{
+				windowSprite->SetColour(i, j, FG_CYAN | BG_CYAN);
+				windowSprite->SetGlyph(i, j, PIXEL_SOLID);
+			}
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 2), 0, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 2), 0, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 2), 1, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 2), 1, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 3), 0, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 3), 0, BG_CYAN | FG_RED);
+
+		windowSprite->SetGlyph((windowSprite->nWidth - 3), 1, PIXEL_THREEQUARTERS);
+		windowSprite->SetColour((windowSprite->nWidth - 3), 1, BG_CYAN | FG_RED);
+
+
+		return 0;
+	}
+	int Boot(olcConsoleGameEngine* olc, float fElapsed, float fElapsedTotal) override
+	{
+		if (onDisplay == false)
+		{
+			onDisplay = true;
+
+			fBootedTime = fElapsedTotal;
+
+			started = false;
+
+			CenterWindow();
+
+			srand(time(NULL));
+
+			if (bBooted) return true;
+
+			sprGameOver = new olcSprite(L"resources\\snakeGameOver.png.spr");
+
+			wavMain		= new PcSound;
+			wavDeath	= new PcSound;
+			wavEat		= new PcSound;
+
+			vPcSounds.push_back(wavMain);
+			vPcSounds.push_back(wavDeath);
+			vPcSounds.push_back(wavEat);
+
+			wavMain->wavData = SoundMacro->LoadSoundFileGetWave(L"resources\\snakeMain.wav", false, true, false);
+			wavDeath->wavData = SoundMacro->LoadSoundFileGetWave(L"resources\\snakeDie.wav", false, true, false);
+			wavEat->wavData = SoundMacro->LoadSoundFileGetWave(L"resources\\snakeEat.wav", false, true, false);
+
+			Reset();
+
+			bBooted = true;
+		}
+
+		return 0;
+	}
+
+	int MouseUpdate(int x, int y) override
+	{
+		this->lastMouseX = mouseX;
+		this->lastMouseY = mouseY;
+		this->mouseX = x;
+		this->mouseY = y;
+
+		return 0;
+	}
+
+};
+
 
 #endif

@@ -5,6 +5,7 @@
 
 #include "anticheat.h"
 #include "sound.h"
+#include "fonthandler.h"
 #include "steam.h"
 #include "consoleManager.h"
 
@@ -13,6 +14,7 @@
 #include "scenemain01.h"
 #include "scenemain11.h"
 #include "scenetest001.h"
+#include "scenedone.h"
 #include "debug.h"
 #include "macro.h"
 
@@ -29,7 +31,6 @@
 class Engine : public olcConsoleGameEngine
 {
 public:
-	long sceneIndex = 1;
 	long lastIndex = -1;
 	std::vector<Scene*> scenes;
 
@@ -63,11 +64,13 @@ public:
 		consoleManager.Initalize(this);
 		soundManager = SoundManager();
 		soundManager.Initalize();
+		FontHandler::Initalize();
 		debugTabIndex--;
 
 		odprintf("Initalizing all the scenes...");
 		scenes.push_back(new SceneTitlescreen);
 		scenes.push_back(new Scene11);
+		scenes.push_back(new SceneDone);
 		//scenes.push_back(new SceneTest001);
 		for (size_t t = 0; t < scenes.size(); t++)
 			scenes[t]->Create(this);

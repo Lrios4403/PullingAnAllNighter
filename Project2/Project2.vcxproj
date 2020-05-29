@@ -32,7 +32,6 @@
     <ClInclude Include="engine.h" />
     <ClInclude Include="float.h" />
     <ClInclude Include="fonthandler.h" />
-    <ClInclude Include="game.h" />
     <ClInclude Include="macro.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="objecth.h" />
@@ -40,16 +39,23 @@
     <ClInclude Include="olcConsoleGameEngineGL.h" />
     <ClInclude Include="opencl.h" />
     <ClInclude Include="pchelloworld.h" />
+    <ClInclude Include="pcmatrix.h" />
+    <ClInclude Include="pcpopup.h" />
     <ClInclude Include="pcradio.h" />
     <ClInclude Include="program.h" />
     <ClInclude Include="regedit.h" />
     <ClInclude Include="render.h" />
     <ClInclude Include="scene.h" />
+    <ClInclude Include="scenedone.h" />
     <ClInclude Include="scenemain01.h" />
     <ClInclude Include="scenehome.h" />
+    <ClInclude Include="scenemain11.h" />
+    <ClInclude Include="scenetest001.h" />
     <ClInclude Include="sound.h" />
     <ClInclude Include="sprite.h" />
     <ClInclude Include="steam.h" />
+    <ClInclude Include="string.h" />
+    <ClInclude Include="tdmap.h" />
     <ClInclude Include="tdmath.h" />
   </ItemGroup>
   <ItemGroup>
@@ -120,6 +126,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Program Files %28x86%29\AMD APP SDK\3.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
@@ -145,6 +152,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Program Files %28x86%29\AMD APP SDK\3.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
@@ -172,6 +180,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Program Files %28x86%29\AMD APP SDK\3.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>
@@ -201,6 +210,7 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Program Files %28x86%29\AMD APP SDK\3.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>NotSet</SubSystem>

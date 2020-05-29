@@ -22,24 +22,24 @@ using namespace std;
 struct collision
 {
 	bool plane = false;
-	triangle tris;
+	triangle3d tris;
 	vec3d points;
 };
 
 vector<collision> CollisionRay(vec3d ray, vec3d rayend, object* o);
 vector<collision> CollisionRay(vec3d ray, vec3d rayend, mesh* m);
 
-vector<collision> CollisionRay(vec3d ray, vec3d rayend, object* o)						//There may be more than one intersected triangle
+vector<collision> CollisionRay(vec3d ray, vec3d rayend, object* o)						//There may be more than one intersected triangle3d
 {
 
 	return CollisionRay(ray, rayend, &o->object_mesh);
 }
 
-vector<collision> CollisionRay(vec3d ray, vec3d rayend, mesh* m)						//There may be more than one intersected triangle
+vector<collision> CollisionRay(vec3d ray, vec3d rayend, mesh* m)						//There may be more than one intersected triangle3d
 {
 	vector<collision> ret;																// The return varaible
 	vec3d raydir = Vector_Normalise(rayend - ray);										// The ray direction
-	vec3d u, v, n, I;																	// The triangle vectors
+	vec3d u, v, n, I;																	// The triangle3d vectors
 	vec3d dir, w0, w;
 	float r, a, b;
 	float uu, uv, vv, wu, wv, D;
@@ -50,7 +50,7 @@ vector<collision> CollisionRay(vec3d ray, vec3d rayend, mesh* m)						//There ma
 		v = Vector_Sub(tri.p[2], tri.p[0]);
 		n = Vector_CrossProduct(u, v);													// cross product
 
-		if (n == vec3d())																// triangle is degenerate
+		if (n == vec3d())																// triangle3d is degenerate
 			continue;																	// do not deal with this case
 
 		dir = raydir - ray;
@@ -59,8 +59,8 @@ vector<collision> CollisionRay(vec3d ray, vec3d rayend, mesh* m)						//There ma
 		b = -Float_CrossProduct(n, dir);
 
 		if (fabs(b) < SMALL_NUM)
-		{																				// ray is  parallel to triangle plane
-			if (a == 0)																	// ray lies in triangle plane
+		{																				// ray is  parallel to triangle3d plane
+			if (a == 0)																	// ray lies in triangle3d plane
 				ret.push_back({ true, tri , vec3d() });
 			else continue;																// If it doesent continue
 		}

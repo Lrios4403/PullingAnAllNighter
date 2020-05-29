@@ -405,6 +405,7 @@ vector<object*> LoadFromObjectFile(string sFilename, bool bHasTexture = false)
 				s >> junk >> f[0] >> f[1] >> f[2];
 				tris.push_back({ verts[f[0] - 1], verts[f[1] - 1], verts[f[2] - 1] });
 				tris[tris.size() - 1].spritePtr = getDefaultMaterial()->sprite;
+
 			}
 		}
 		else
@@ -430,10 +431,21 @@ vector<object*> LoadFromObjectFile(string sFilename, bool bHasTexture = false)
 
 				tokens[nTokenCount].pop_back();
 
+#ifndef _DEBUG
 
+				if (currMaterial->sprite != getDefaultMaterial()->sprite)
+				{
+					tris.push_back({ verts[stoi(tokens[0]) - 1], verts[stoi(tokens[2]) - 1], verts[stoi(tokens[4]) - 1],
+						texs[stoi(tokens[1]) - 1], texs[stoi(tokens[3]) - 1], texs[stoi(tokens[5]) - 1] });
+					tris[tris.size() - 1].spritePtr = currMaterial->sprite;
+				}
+
+#else
 				tris.push_back({ verts[stoi(tokens[0]) - 1], verts[stoi(tokens[2]) - 1], verts[stoi(tokens[4]) - 1],
 					texs[stoi(tokens[1]) - 1], texs[stoi(tokens[3]) - 1], texs[stoi(tokens[5]) - 1] });
- 				tris[tris.size() - 1].spritePtr = currMaterial->sprite;
+				tris[tris.size() - 1].spritePtr = currMaterial->sprite;
+
+#endif // !_DEBUG
 
 			}
 

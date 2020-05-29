@@ -27,7 +27,7 @@ struct cl_vec3d
 	cl_float w = 1; // Need a 4th term to perform sensible matrix vector multiplication
 };
 
-struct cl_triangle
+struct cl_triangle3d
 {
 	vec3d p[3];
 	vec2d t[3]; // added a texture coord per vertex

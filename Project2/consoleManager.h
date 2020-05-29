@@ -16,22 +16,12 @@
 
 #include <windows.h>
 
+//Needed for easier reading
 void* pConsoleManager = nullptr;
+#define ConsoleMacro ((ConsoleManager*)pConsoleManager)
 
-enum ConsoleError
+DWORD defColorPalette[16] =
 {
-	FailedToGetRegisteryKey = 1,
-	FailedToGetRegisteryValue,
-};
-
-struct ConsoleColorPalette
-{
-	DWORD dwColors[16];
-};
-
-ConsoleColorPalette defColorPalette =
-{
-	{
 		789516,
 		14300928,
 		958739,
@@ -47,136 +37,99 @@ ConsoleColorPalette defColorPalette =
 		5654759,
 		10354868,
 		10875385,
-		15921906,
-	}
+		15921906
 };
 
 class ConsoleManager
 {
 private:
 	
-	HKEY hKey;
-
-	ConsoleColorPalette befColorPalette;
-
-	vector<wstring> wKeyNames =
-	{
-		L"ColorTable00",
-		L"ColorTable01",
-		L"ColorTable02",
-		L"ColorTable03",
-		L"ColorTable04",
-		L"ColorTable05",
-		L"ColorTable06",
-		L"ColorTable07",
-		L"ColorTable08",
-		L"ColorTable09",
-		L"ColorTable10",
-		L"ColorTable11",
-		L"ColorTable12",
-		L"ColorTable13",
-		L"ColorTable14",
-		L"ColorTable15",
-	};
-
+	CONSOLE_SCREEN_BUFFER_INFOEX	infoCurrent;
+	CONSOLE_FONT_INFOEX				infoFont;
+	olcConsoleGameEngine*			olce;
 
 public:
 
 	int Initalize(olcConsoleGameEngine* olc)
 	{
 		odprintf("Initalizing ConsoleManager[%p]...", this);
-
 		debugTabIndex++;
 
-		int iReturn = 0;
+		olce = olc;
 
-		//Get the registery console info
-		odprintf("Getting the console HKEY...");
-		iReturn = RegOpenKeyEx( HKEY_CURRENT_USER,L"Console", NULL, KEY_QUERY_VALUE, &hKey);
+		SetPalette(defColorPalette);
 
-		if (iReturn != ERROR_SUCCESS)
-		{
-			odprintf("ERROR: Failed to use RegOpenKeyEx. [%i] !", iReturn);
-			debugTabIndex--;
-			return FailedToGetRegisteryKey;
-		}
-
-		//Collect the default color pallete to set back when the console is destroyed
-		odprintf("Reading\\Setting the console table registery keys...");
-
-		/*
-		for (int i = 0; i < wKeyNames.size(); i++)
-		{
-			odprintf("%ls", wKeyNames[i].c_str());
-			befColorPalette.dwColors[i] = GetValueFromRegistry(hKey, wKeyNames[i].c_str());
-			SetRegistryValues(hKey, wKeyNames[i].c_str(), defColorPalette.dwColors[i]);
-		}
-		*/
-
-		befColorPalette = GetPalette();
-		SetPalette(&defColorPalette);
+		pConsoleManager = this;
 
 		debugTabIndex--;
-		
-		odprintf("Initalized ConsoleManager[%p]!", this);
-
 		return 0;
 	}
 
-	int SetPalette(ConsoleColorPalette* ccp)
+	int SetPalette(DWORD* colorPallete)
 	{
-		odprintf("ConsoleManager[%p].SetPalette(%p)...", this, ccp);
-
-		debugTabIndex++;
-
-		for (int i = 0; i < wKeyNames.size(); i++)
-		{
-			odprintf("%ls | 0x0%08x", wKeyNames[i].c_str(), ccp->dwColors[i]);
-			SetRegistryValues(hKey, wKeyNames[i].c_str(), ccp->dwColors[i]);
-		}
-
-		debugTabIndex--;
+		infoCurrent.cbSize = sizeof(infoCurrent);
+		HANDLE	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+		GetConsoleScreenBufferInfoEx(hConsole, &infoCurrent);
+		for (int i = 0; i < 16; i++)infoCurrent.ColorTable[i] = colorPallete[i];
+		SetConsoleScreenBufferInfoEx(hConsole, &infoCurrent);
 
 		return 0;
 
 	}
 
-	ConsoleColorPalette GetPalette()
+	int ShowConsole(bool bShow)
 	{
-		odprintf("ConsoleManager[%p].GetPalette()...", this);
-		debugTabIndex++;
+		if(bShow)
+			ShowWindow(GetConsoleWindow(), SW_SHOW);
+		else
+			ShowWindow(GetConsoleWindow(), SW_HIDE);
 
-		ConsoleColorPalette retp;
-
-		for (int i = 0; i < wKeyNames.size(); i++)
-		{
-			odprintf("%ls", wKeyNames[i].c_str());
-			retp.dwColors[i] = GetValueFromRegistry(hKey, wKeyNames[i].c_str());
-		}
-
-		debugTabIndex--;
-
-		return retp;
-
+		return 0;
 	}
+
+	bool CenterWindow()
+	{
+		HWND ConsoleWindow;
+		ConsoleWindow = GetForegroundWindow();
+
+		//Getting the desktop hadle and rectangule
+		HWND   hwndScreen;
+		RECT   rectScreen;
+		hwndScreen = GetDesktopWindow();
+		GetWindowRect(hwndScreen, &rectScreen);
+
+		RECT rConsole;
+		GetWindowRect(GetConsoleWindow(), &rConsole);
+		int Width = rConsole.left = rConsole.right;
+		int Height = rConsole.bottom - rConsole.top;
+
+		//caculate the window console to center of the screen	
+		int ConsolePosX;
+		int ConsolePosY;
+		ConsolePosX = ((rectScreen.right - rectScreen.left) / 2 - Width / 2);
+		ConsolePosY = ((rectScreen.bottom - rectScreen.top) / 2 - Height / 2);
+		SetWindowPos(GetConsoleWindow(), NULL, ConsolePosX, ConsolePosY, Width, Height, SWP_SHOWWINDOW || SWP_NOSIZE);
+
+		SwitchToThisWindow(GetConsoleWindow(), true);
+
+		int width = rectScreen.right - rectScreen.left;
+		int height = rectScreen.bottom - rectScreen.top;
+		POINT cursorPos;
+		SetCursorPos((width / 2) + rectScreen.left, (height / 2) + rectScreen.top);
+
+		return true;
+	}
+
 
 	int Destroy()
 	{
 		odprintf("ConsoleManager[%p].Destroy()...", this);
-
 		debugTabIndex++;
 
-		odprintf("Returning the color palette to its origional schema...");
-		SetPalette(&befColorPalette);
-
 		debugTabIndex--;
-
 		return 0;
 	}
 
 };
-
-//Needed for easier reading
-#define ConsoleMacro ((ConsoleManager*)pConsoleManager)
 
 #endif

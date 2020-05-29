@@ -29,8 +29,12 @@ void SpriteTexturedTriangle(olcSprite* origin, float* pDepthBuffer, int screenWi
 	int x3, int y3, float u3, float v3, float w3,
 	olcSprite* tex);
 
+olcSprite* SubspriteFromSprite(olcSprite* origin, int x, int y, int width, int height);
+
 void SpriteDraw(olcSprite* origin, int x, int y, short c = 0x2588, short col = 0x000F)
 {
+	if (c == 0x0020) return;
+
 	if (x >= 0 && x < origin->nWidth && y >= 0 && y < origin->nHeight)
 	{
 		origin->SetColour(x, y, col);
@@ -143,7 +147,7 @@ void SpriteDrawTriangle(olcSprite* origin, int x1, int y1, int x2, int y2, int x
 	SpriteDrawLine(origin, x3, y3, x1, y1, c, col);
 }
 
-// https://www.avrfreaks.net/sites/default/files/triangles.c
+// https://www.avrfreaks.net/sites/default/files/triangle3ds.c
 void SpriteFillTriangle(olcSprite* origin, int x1, int y1, int x2, int y2, int x3, int y3, short c = 0x2588, short col = 0x000F)
 {
 	auto SWAP = [](int& x, int& y) { int t = x; x = y; y = t; };
@@ -526,6 +530,20 @@ void SpriteTexturedTriangle(olcSprite* origin, float* pDepthBuffer, int screenWi
 			}
 		}
 	}
+}
+
+inline olcSprite* SubspriteFromSprite(olcSprite* origin, int x, int y, int width, int height)
+{
+	olcSprite* sprReturn = new olcSprite(width, height);
+
+	for(int i = 0; i < width; i++)
+		for (int j = 0; j < height; j++)
+		{
+			sprReturn->SetColour(i, j, origin->GetColour(i + x, i + y));
+			sprReturn->SetGlyph(i, j, origin->GetGlyph(i + x, i + y));
+		}
+
+	return sprReturn;
 }
 
 

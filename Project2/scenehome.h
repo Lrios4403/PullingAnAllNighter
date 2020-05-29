@@ -183,10 +183,10 @@ public:
 		else
 			olcEngine->DrawSprite(51, 51, spriteBtnPlay);
 
-		if (pMouse.x >= 51 && pMouse.x <= 51 + spriteBtnSettings->nWidth && pMouse.y >= 51+16 && pMouse.y <= 51 + 16+ spriteBtnSettings->nHeight)
-			olcEngine->DrawSprite(51, 52+16, spriteBtnSettings);
-		else
-			olcEngine->DrawSprite(51, 51 + 16, spriteBtnSettings);
+		//if (pMouse.x >= 51 && pMouse.x <= 51 + spriteBtnSettings->nWidth && pMouse.y >= 51+16 && pMouse.y <= 51 + 16+ spriteBtnSettings->nHeight)
+		//	olcEngine->DrawSprite(51, 52+16, spriteBtnSettings);
+		//else
+		//	olcEngine->DrawSprite(51, 51 + 16, spriteBtnSettings);
 
 		if (bEnding)
 		{
@@ -251,16 +251,16 @@ public:
 
 			}
 
-			for (int x = 0; x < spriteBtnSettings->nWidth; x++) for (int y = 0; y < spriteBtnSettings->nHeight; y++)
-			{
-				short s = spriteBtnSettings->GetColour(x, y);
+			//for (int x = 0; x < spriteBtnSettings->nWidth; x++) for (int y = 0; y < spriteBtnSettings->nHeight; y++)
+			//{
+			//	short s = spriteBtnSettings->GetColour(x, y);
 
-				if (s > 0) s--;
+			//	if (s > 0) s--;
 
-				spriteBtnSettings->SetColour(x, y, s);
-				spriteBtnSettings->SetGlyph(x, y, PIXEL_HALF);
+			//	spriteBtnSettings->SetColour(x, y, s);
+			//	spriteBtnSettings->SetGlyph(x, y, PIXEL_HALF);
 
-			}
+			//}
 		}
 
 		if (bEnding)

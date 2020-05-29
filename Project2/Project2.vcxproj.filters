@@ -67,6 +67,12 @@
     <Filter Include="Header Files\engine\float">
       <UniqueIdentifier>{134406fb-aa5b-466e-88af-2f8674be17a3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\engine\3d">
+      <UniqueIdentifier>{e41e57ae-b376-44cd-8d01-df7ab14cfbb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\engine\misc">
+      <UniqueIdentifier>{e63f207b-fad8-4700-b4ff-f134c706179c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -81,9 +87,6 @@
       <Filter>Header Files\engine\opencl</Filter>
     </ClInclude>
     <ClInclude Include="olcConsoleGameEngine.h">
-      <Filter>Header Files\engine\javidx9</Filter>
-    </ClInclude>
-    <ClInclude Include="objecth.h">
       <Filter>Header Files\engine\javidx9</Filter>
     </ClInclude>
     <ClInclude Include="tdmath.h">
@@ -113,13 +116,7 @@
     <ClInclude Include="macro.h">
       <Filter>Header Files\engine</Filter>
     </ClInclude>
-    <ClInclude Include="game.h">
-      <Filter>Header Files\game</Filter>
-    </ClInclude>
     <ClInclude Include="render.h">
-      <Filter>Header Files\engine\render</Filter>
-    </ClInclude>
-    <ClInclude Include="object.h">
       <Filter>Header Files\engine\render</Filter>
     </ClInclude>
     <ClInclude Include="debug.h">
@@ -160,6 +157,33 @@
     </ClInclude>
     <ClInclude Include="float.h">
       <Filter>Header Files\engine\float</Filter>
+    </ClInclude>
+    <ClInclude Include="object.h">
+      <Filter>Header Files\engine\3d</Filter>
+    </ClInclude>
+    <ClInclude Include="tdmap.h">
+      <Filter>Header Files\engine\3d</Filter>
+    </ClInclude>
+    <ClInclude Include="scenemain11.h">
+      <Filter>Header Files\game\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="string.h">
+      <Filter>Header Files\engine\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="objecth.h">
+      <Filter>Header Files\engine\3d</Filter>
+    </ClInclude>
+    <ClInclude Include="scenetest001.h">
+      <Filter>Header Files\game\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="pcpopup.h">
+      <Filter>Header Files\game\computer\programs</Filter>
+    </ClInclude>
+    <ClInclude Include="pcmatrix.h">
+      <Filter>Header Files\game\computer\programs</Filter>
+    </ClInclude>
+    <ClInclude Include="scenedone.h">
+      <Filter>Header Files\game\scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -123,6 +123,21 @@ struct vec2d
 		this->v /= v.v;
 	}
 
+	bool operator ==(const vec2d& v)
+	{
+		return v.x == x && v.y == y;
+	}
+
+	bool operator <=(const float& f)
+	{
+		return (x <= f) && (y <= f);
+	}
+
+	bool operator <(const float& f)
+	{
+		return (x < f) && (y < f);
+	}
+
 };
 
 struct vec3d

@@ -12,7 +12,7 @@ class Scene11 : public Scene
 private:
 	Render render;
 	olcSprite* sprActionTab, * sprActionE;
-	olcSprite* screenSprite;
+	olcSprite* screenSprite, * sprBlackface;
 	bool bCaptureMouse				= true;
 	bool bFocusToggle				= false;
 	bool bFlicker					= false;
@@ -21,9 +21,10 @@ private:
 	float fCurrentAmbienceVolume	= 2.0f;
 
 	vector<olcSprite*>	vspriteArray;
+	olcSprite			* sprEndingMessage, * sprWindowMessage;
 
-	Computer computer;
-	rectangle rComputer;
+	Computer			computer;
+	rectangle			rComputer;
 
 	vector<WaveData*>	wdRadio;
 	WaveData*			wdCurrentRadio			= nullptr;
@@ -31,15 +32,29 @@ private:
 	rectangle			rRadio;
 	WaveData*			wavHighPitch;
 	WaveData*			wavAmbience;
+	WaveData*			wavSpook1;
 
-	object* objWindowOpen, * objWindowClosed, * objWindowMain;
+	object				* objWindowOpen, * objWindowClosed, * objWindowMain;
 	rectangle			rWindow;
 	WaveData*			wavWindow;
 	float				fWavWindow				= 0;
+	float				fWindowKill				= 0;
+	float				fWindowKillDelay		= 0;
+	float				fWindowKillPos			= 0.605510;
+	float				fEndingLength			= 0;
+	bool				bWindowKillSet			= false;
 	bool				bWindowOpen				= false;
 	bool				bWindowOpenAnimation	= false;
+	bool				bWindowLastOpen			= false;
+	bool				bLookupKill				= false;
+	bool				bEndingMessage			= false;
+	bool				bAlreadyEndingMessage	= false;
+	bool				bInTheEndgame			= true;
+	bool				bWindowFirstLook		= false;
+	bool				bWindowMessage			= false;
 
-	vector<object*>		objsWhitefacePos;
+	vector<object*>		objsHeadlights;
+	vector<object*>		objsEvilman;
 
 public:
 	bool Initalize(olcConsoleGameEngine* e) override
@@ -77,8 +92,11 @@ public:
 			new olcSprite(L"resources\\tutorial msg7.png.spr"),
 		};
 
-		sprActionTab	= new olcSprite(L"resources\\info tab.png.spr");
-		sprActionE		= new olcSprite(L"resources\\info e.png.spr");
+		sprActionTab		= new olcSprite(L"resources\\info tab.png.spr");
+		sprActionE			= new olcSprite(L"resources\\info e.png.spr");
+		sprBlackface		= new olcSprite(L"resources\\blackface.png.spr");
+		sprEndingMessage	= new olcSprite(L"resources\\endingmessage.png.spr");
+		sprWindowMessage	= new olcSprite(L"resources\\windowmessage.png.spr");
 
 		render.map.rBounds.push_back(rectangle(-5.750000, 3.785412, 1.9, 3.714588));
 		render.map.rBounds.push_back(rectangle(-5.750000, -0.835891-.1, 5.750000 - 4.257414, 3.054524 + 0.835891+.1));
@@ -124,30 +142,41 @@ public:
 				objWindowMain = render.map.objects[l];
 			}
 
-			foundpos = render.map.objects[l]->object_mesh.name.find(wstring(L"whiteface"));
+			foundpos = render.map.objects[l]->object_mesh.name.find(wstring(L"evilman"));
 			if (foundpos != std::string::npos)
 			{
-				objsWhitefacePos.push_back(render.map.objects[l]);
+				objsEvilman.push_back(render.map.objects[l]);
+				render.map.objects[l]->visible = false;
+			}
+
+			foundpos = render.map.objects[l]->object_mesh.name.find(wstring(L"Headlights"));
+			if (foundpos != std::string::npos)
+			{
+				objsHeadlights.push_back(render.map.objects[l]);
 				render.map.objects[l]->visible = false;
 			}
 		}
 
-		for (int i = 0; i < render.map.objects[render.map.objects.size() - 1]->object_mesh.tris.size(); i++)
+		for (auto o : objsHeadlights)
 		{
+			o->visible = false;
+		}
 
-			render.map.objects[render.map.objects.size()-1]->object_mesh.tris[i].p[0] = objsWhitefacePos[1]->object_mesh.tris[i].p[0];
-			render.map.objects[render.map.objects.size()-1]->object_mesh.tris[i].p[1] = objsWhitefacePos[1]->object_mesh.tris[i].p[1];
-			render.map.objects[render.map.objects.size()-1]->object_mesh.tris[i].p[2] = objsWhitefacePos[1]->object_mesh.tris[i].p[2];
+		for (auto o : objsEvilman)
+		{
+			o->visible = false;
 		}
 
 		odprintf("Allocating sprite memory...");
 		screenSprite = new olcSprite(300, 100);
 
-		if (SoundMacro->LoadSoundFile(L"ambeince.wav", false, true, false) == 0)
+		if (SoundMacro->LoadSoundFile(L"resources\\ambeince.wav", false, true, false) == 0)
 		{
 			wavAmbience = SoundMacro->vSounds[SoundMacro->vSounds.size() - 1];
 			wavAmbience->SetVolume(fCurrentAmbienceVolume, 100);
 		}
+
+		wavSpook1 = SoundMacro->LoadSoundFileGetWave(L"resources\\spook1.wav", false, true, false);
 
 		wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\radiomc1.wav", false, true, false));
 		wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\radiomc2.wav", false, true, false));
@@ -155,7 +184,8 @@ public:
 		wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\radiomc4.wav", false, true, false));
 		wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\radiomc5.wav", false, true, false));
 		wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\radiomc6.wav", false, true, false));
-		wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\penis.wav", false, true, false));
+		wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\radiomc7.wav", false, true, false));
+		//wdRadio.push_back(SoundMacro->LoadSoundFileGetWave(L"resources\\penis.wav", false, true, false));
 
 		debugTabIndex--;
 		return true;
@@ -180,6 +210,34 @@ public:
 	{
 		fElapsedTotal += fElapsedTime;
 
+		if (computer.pcDriver->bEnded)
+		{
+			fWindowKill += fElapsedTime;
+			//odprintf("%f", fWindowKill);
+			if (fWindowKill > 45)
+			{
+				for (auto o : objsEvilman)
+				{
+					o->visible = true;
+					wavSpook1->lpSecondaryBuffer->Play(0, 0, DSBPLAY_LOOPING);
+				}
+			
+				if (render.map.vCamera.z < fWindowKillPos)
+					exit(0);
+				else if (!bInComputer)
+				{
+					fWindowKillPos += fElapsedTime;
+				}
+
+			}
+		}
+
+		if (bInTheEndgame)
+		{
+			fEndingLength += fElapsedTime;
+			odprintf("%f", fEndingLength);
+		}
+
 		//Misc.
 		if (fWavWindow < .5)
 		{
@@ -189,6 +247,13 @@ public:
 			{
 				wavWindow->lpSecondaryBuffer->Stop();
 			}
+		}
+
+		if (computer.pcDriver->bOutsideTrigger)
+		{
+			computer.pcDriver->bOutsideTrigger = false;
+			bWindowOpenAnimation = true;
+			bWindowOpen = true;
 		}
 
 		//Handle animations
@@ -220,6 +285,46 @@ public:
 				objWindowMain->object_mesh.tris[i] = tri3;
 
 			}
+
+		}
+
+		if (bWindowOpen == false && bWindowLastOpen == true && !bWindowKillSet)
+		{
+			bWindowKillSet = true;
+			fWindowKillDelay = .075;
+
+			if (!bWindowFirstLook)
+			{
+				bWindowFirstLook = true;
+				bWindowMessage = true;
+			}
+		}
+
+		bWindowLastOpen = bWindowOpen;
+
+		if (bWindowKillSet)
+		{
+			fWindowKillDelay -= fElapsedTime;
+
+			if (fWindowKillDelay < 0)
+			{
+				//Handle pc kill updates
+				if (computer.pcDriver->bIsOutside)
+				{
+					computer.pcDriver->bIsOutside = false;
+
+					computer.pcDriver->Exit();
+
+					for (auto o : objsHeadlights)
+					{
+						o->visible = false;
+					}
+				}
+
+				fWindowKill = 0;
+				bWindowKillSet = false;
+			}
+
 		}
 
 		//Handle movements and render
@@ -228,8 +333,14 @@ public:
 #pragma region HandleComputerRender
 			computer.Update(olcEngine, fElapsedTime, fElapsedTotal);
 			olcEngine->DrawSprite(0, 0, computer.GetScreenSprite());
+
 			if (olcEngine->GetKey(VK_TAB).bPressed)
+			{
 				IntoComputer(false);
+
+				bEndingMessage = computer.pcDriver->bEnded && computer.pcMonkey->bEnded && computer.pcSnake->bBooted && !bAlreadyEndingMessage;
+
+			}
 
 			for (size_t t = 0; t < vPcSounds.size(); t++)
 			{
@@ -259,10 +370,10 @@ public:
 			if (olcEngine->GetKey(L'D').bHeld)
 				render.fYaw += 2.0f * fElapsedTime;
 
-			//if (render.map.vCamera.x > 5.75f) render.map.vCamera.x = 5.75f;
-			//if (render.map.vCamera.x < -5.75f) render.map.vCamera.x = -5.75f;
-			//if (render.map.vCamera.z > 7.5f) render.map.vCamera.z = 7.5f;
-			//if (render.map.vCamera.z < -7.5f) render.map.vCamera.z = -7.5f;
+			if (render.map.vCamera.x > 5.75f) render.map.vCamera.x = 5.75f;
+			if (render.map.vCamera.x < -5.75f) render.map.vCamera.x = -5.75f;
+			if (render.map.vCamera.z > 7.5f) render.map.vCamera.z = 7.5f;
+			if (render.map.vCamera.z < -7.5f) render.map.vCamera.z = -7.5f;
 
 			if (olcEngine->GetKey(27).bPressed)
 			{
@@ -296,10 +407,21 @@ public:
 				if (render.fPitch > HALF_PI) render.fPitch = HALF_PI - 0.001f;
 				if (render.fPitch < -HALF_PI) render.fPitch = -HALF_PI + 0.001f;
 
+				if (render.fPitch <= -1.084571 && computer.pcMonkey->bEnded) bLookupKill = true;
+
 				SetCursorPos((width / 2) + size.left, (height / 2) + size.top);
 			}
 
 			render.map.vCamera.y = 0.5;
+
+			//Handle pc kill updates
+			if (computer.pcDriver->bIsOutside || fWindowKill > 60)
+			{
+				for (auto o : objsHeadlights)
+				{
+					o->visible = true;
+				}
+			}
 
 			//Handle the pc sounds
 			for (size_t t = 0; t < vPcSounds.size(); t++)
@@ -363,9 +485,50 @@ public:
 				}
 			}
 
+			if (bLookupKill)
+			{
+				float yoffset = olcEngine->ScreenHeight() * (-render.fPitch*2);
+				olcEngine->DrawSprite( (olcEngine->ScreenWidth()/2) - (sprBlackface->nWidth/2), yoffset, sprBlackface );
+				if (render.fPitch > 0) exit(0);
+			}
+
+			if (bWindowMessage)
+			{
+				olcEngine->DrawSprite(0, 0, sprWindowMessage);
+				bAlreadyEndingMessage = true;
+
+				if ((olcEngine->GetKey(L'W').bHeld)
+					&& (olcEngine->GetKey(L'S').bHeld)
+					&& (olcEngine->GetKey(L'A').bHeld)
+					&& (olcEngine->GetKey(L'D').bHeld))
+				{
+					bWindowMessage = false;
+				}
+
+			}
+
+
+			if (bEndingMessage)
+			{
+				olcEngine->DrawSprite(0, 0, sprEndingMessage);
+				bAlreadyEndingMessage = true;
+
+				if ((olcEngine->GetKey(L'W').bHeld)
+					&& (olcEngine->GetKey(L'S').bHeld)
+					&& (olcEngine->GetKey(L'A').bHeld)
+					&& (olcEngine->GetKey(L'D').bHeld))
+				{
+					bEndingMessage = false;
+				}
+
+			}
+
 #pragma endregion
 
 		}
+
+		if (fEndingLength > 60*2)
+			sceneIndex = 2;
 
 		//Handle the ambience sound
 		wavAmbience->SetVolume(fCurrentAmbienceVolume, 100);

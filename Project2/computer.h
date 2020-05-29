@@ -27,12 +27,15 @@ private:
 	olcSprite* spriteScreen;
 
 	vector<PcProgram*>	vPrograms;
-	PcMonley*			pcMonkey;													//Yes ik i spelled monkey wrong it was 4 am stfu
 
 	bool				bPopup = false;
 	PcPopup*			pcPopup;
 
 public:
+	PcMonley*			pcMonkey;																//Yes ik i spelled monkey wrong it was 4 am stfu
+	PcDriver*			pcDriver;
+	PcSnake*			pcSnake;
+
 	int Initalize(olcConsoleGameEngine* e, int fontwidth, int fontheight)
 	{
 		odprintf("Initalizing Computer...");
@@ -57,8 +60,10 @@ public:
 
 		vPrograms.push_back(new PcMonley());
 		pcMonkey = (PcMonley*)vPrograms[0];
-		vPrograms.push_back(new PcHelloWorld()); 
-		vPrograms.push_back(new PcMatrix());
+		vPrograms.push_back(new PcDriver());
+		pcDriver = (PcDriver*)vPrograms[1];
+		vPrograms.push_back(new PcSnake());
+		pcSnake = (PcSnake*)vPrograms[2];
 
 		int iTaskbarIndex = 0;
 		for (PcProgram* p : vPrograms)												//Cycle through all of the programs
@@ -264,36 +269,36 @@ public:
 				spriteScreen->SetColour(i, j, BG_DARK_CYAN | FG_CYAN);
 			}
 
-		void* lastp = nullptr;
-		for (int i = 0; i < vPrograms.size(); i++)
-		{
-			PcProgram* p = vPrograms[i];
+		//void* lastp = nullptr;
+		//for (int i = 0; i < vPrograms.size(); i++)
+		//{
+		//	PcProgram* p = vPrograms[i];
 
-			if (p->pDesktop.x != 0 && p->pDesktop.y != 0)
-			{
-				int tx = (p->pDesktop.x-1) * 12 + 2;
-				int ty = (p->pDesktop.y-1) * 8 + 1;
+		//	if (p->pDesktop.x != 0 && p->pDesktop.y != 0)
+		//	{
+		//		int tx = (p->pDesktop.x-1) * 12 + 2;
+		//		int ty = (p->pDesktop.y-1) * 8 + 1;
 
-				//odprintf("%i %i %i %i %i ", tx, ty, p->pDesktop.x, p->pDesktop.y, i);
+		//		//odprintf("%i %i %i %i %i ", tx, ty, p->pDesktop.x, p->pDesktop.y, i);
 
-				for (int i = 0; i < 12; i++)																		//Draw the icon
-					for (int j = 0; j < 8; j++)
-					{
-						int xpos = tx + i;
-						int ypos = ty + j;
+		//		for (int i = 0; i < 12; i++)																		//Draw the icon
+		//			for (int j = 0; j < 8; j++)
+		//			{
+		//				int xpos = tx + i;
+		//				int ypos = ty + j;
 
-						short col, ch;
-						col = p->spriteIcon->GetColour(i, j);
-						ch = p->spriteIcon->GetGlyph(i, j);
+		//				short col, ch;
+		//				col = p->spriteIcon->GetColour(i, j);
+		//				ch = p->spriteIcon->GetGlyph(i, j);
 
-						if (ch == 32) continue;																		//Test to see if the character is non-existant
+		//				if (ch == 32) continue;																		//Test to see if the character is non-existant
 
-						spriteScreen->SetColour(xpos, ypos, col);
-						spriteScreen->SetGlyph(xpos, ypos, ch);
-					}
+		//				spriteScreen->SetColour(xpos, ypos, col);
+		//				spriteScreen->SetGlyph(xpos, ypos, ch);
+		//			}
 
-			}
-		}
+		//	}
+		//}
 
 		return 0;
 	}

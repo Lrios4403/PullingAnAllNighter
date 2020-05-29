@@ -141,7 +141,7 @@ public:
 		pDepthBuffer = new float[(float)width * height];	//Setup the depth buffer
 
 		// Projection Matrix
-		matProj = Matrix_MakeProjection(90.0f, ((float)width / 2) / ((float)height * 2), 0.0f, 1000.0f);
+		matProj = Matrix_MakeProjection(fFOV, ((float)width / 2) / ((float)height * 2), 0.0f, 1000.0f);
 
 		odprintf("Creating screen sprite [%d]...!\n", (screenWidth * screenHeight));
 

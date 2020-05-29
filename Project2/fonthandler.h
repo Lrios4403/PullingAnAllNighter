@@ -2,6 +2,7 @@
 #define FONTHANDLER_H
 
 #include "olcConsoleGameEngine.h"
+#include "sprite.h"
 #include <iostream>
 #include <fstream>
 #include <strstream>
@@ -10,9 +11,16 @@
 
 using namespace std;
 
+olcSprite* sprNumbers;
+
 class FontHandler
 {
 public:
+
+	static void Initalize()
+	{
+		sprNumbers = new olcSprite(L"resources\\numbers.png.spr");
+	}
 
 	static olcSprite* GetSprite(std::string str, short col)
 	{
